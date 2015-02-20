@@ -337,6 +337,8 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 			return $this;
 
 		$xml = new Varien_Simplexml_Config( (string)$file );
+
+		//TODO: Fix the bug of No node, instead of just ignoring it
 		if (!$xml->getNode()){
 			return $this;
 		}
