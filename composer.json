@@ -1,0 +1,16 @@
+{
+  "name":"zainengineer/mage_translate",
+  "type":"magento-module",
+  "license":"OSL-3.0",
+  "homepage":"https://github.com/zainengineer/translate",
+  "description":"Extracts strings marked for translations and creates a CSV for them",
+  "authors":[
+    {
+      "name":"Zain ul abidin",
+      "email":"zain@aligent.com.au"
+    }
+  ],
+  "require":{
+    "magento-hackathon/magento-composer-installer":"*"
+  }
+}
