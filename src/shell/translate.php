@@ -1,12 +1,22 @@
 <?php
+/**
+ * For some odd reason require_once "abstract.php" was not working.
+ * Partially because file is symlinked. Did following work arounds to get the actual paths
+ */
+$currentPath = realpath(getcwd());
+$scriptPath = $argv[0];
+$fullFileName = $currentPath . '/'. $scriptPath;
+$dirName = dirname($fullFileName);
+$abstractPath = $dirName . '/abstract.php';
 
-require_once 'abstract.php';
-
+require_once $abstractPath;
 /**
  * Class AnattaDesign_Shell_Translate
  */
 class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 
+	//TODO: find a way that local installation can overwrite this setting
+	public $limitLocale = array('es_ES');
 	/**
 	 * @var array
 	 */
@@ -121,7 +131,7 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 			return $dir->walk( array( $this, 'dir' ) );
 
 		$function = 'process' . strtoupper( $dir->getExtension() );
-		if( is_callable( array( $this, $function ) ) )
+ 		if( is_callable( array( $this, $function ) ) )
 			$this->$function( $dir );
 
 		unset( $dir );
@@ -139,7 +149,10 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 	public function generateCSV( $locale, $module = "test" ) {
 		if( !( $locale instanceof Varien_Directory_Collection ) )
 			return;
-
+		/** @var $locale Varien_Directory_Collection */
+		if ($this->limitLocale && (!in_array($locale->getDirName(), $this->limitLocale))) {
+			return;
+		}
 		$strings = array_unique( $this->strings );
 		$file = $locale->getPath() . DS . $module . '.csv';
 
@@ -324,7 +337,9 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 			return $this;
 
 		$xml = new Varien_Simplexml_Config( (string)$file );
-
+		if (!$xml->getNode()){
+			return $this;
+		}
 		$this->_xmlelement( $xml->getNode() );
 
 		return $this;
@@ -363,6 +378,9 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 	 * @param $xml Varien_Simplexml_Element
 	 */
 	protected function _xmlelement( $xml ) {
+		if (!$xml){
+			$breakhere=1;
+		}
 		if( !$xml->hasChildren() )
 			return;
 
