@@ -134,9 +134,7 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 
 		$function = 'process' . strtoupper( $dir->getExtension() );
  		if( is_callable( array( $this, $function ) ) ){
-            if (($filePath = $dir->getFilePath()) && ($pathName = $filePath->getPathName())){
-                $this->verboseMessage("processing " . $this->removeBasePath($pathName));
-            }
+          $this->verboseMessage("processing " . $this->removeBasePath($this->getObjectFilePath($dir)));
             $this->$function( $dir );
         }
 
@@ -213,7 +211,11 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 		ob_start();
 		foreach( $translations as $string )
 			echo "\"$string[0]\",\"$string[1]\"\n";
-		file_put_contents( $file, str_replace( '\"', '""', ob_get_clean() ) );
+        $content = str_replace( '\"', '""', ob_get_clean() );
+        //do not write empty file unless already exists
+        if (file_exists($file) || $content){
+            file_put_contents( $file,  $content);
+        }
 	}
 
 	/**
@@ -226,7 +228,8 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 			return $this;
 
 		$this->_translateFunction( $file );
-
+        $file = $this->getObjectFilePath($file);
+        
         $source = file_get_contents( $file );
 		$tokens = token_get_all( $source );
 
@@ -283,7 +286,8 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 		if( !( $file instanceof Varien_File_Object ) )
 			return $this;
 
-		$source = file_get_contents( $file );
+		$file = $this->getObjectFilePath($file);
+        $source = file_get_contents( $file );
 		$tokens = token_get_all( $source );
 
 		while( $token = next( $tokens ) ) {
@@ -499,14 +503,27 @@ USAGE;
         $file = $bt[0]['file'];
         $file = $this->removeBasePath($file);
         $line = $bt[0]['line'];
-
         echo "$message  $file:$line \n";
     }
     public function removeBasePath($file)
     {
+        if (!is_string($file)){
+            return $file;
+        }
         $file = str_replace(BP,'',$file);
         $file = ltrim($file,'/');
         return $file;
+    }
+    public function getObjectFilePath (Varien_File_Object $oFilePath)
+    {
+
+        if (file_exists($oFilePath)){
+            return $oFilePath;
+        }
+        if (($filePath = $oFilePath->getFilePath()) && ($pathName = $filePath->getPathName())){
+            return $pathName;
+        }
+        return $oFilePath;
     }
 }
 
