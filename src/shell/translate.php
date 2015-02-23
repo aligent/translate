@@ -229,7 +229,7 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 
 		$this->_translateFunction( $file );
         $file = $this->getObjectFilePath($file);
-        
+
         $source = file_get_contents( $file );
 		$tokens = token_get_all( $source );
 
