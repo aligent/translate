@@ -17,6 +17,7 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 
 	//TODO: find a way that local installation can overwrite this setting
 	public $limitLocale = array('es_ES');
+    public $verbose = false;
 	/**
 	 * @var array
 	 */
@@ -36,6 +37,7 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 	public function run() {
 		// if module doesn't exist show error
 		$module = $this->getArg( 'module' ) ? $this->getArg( 'module' ) : $this->getArg( 'm' );
+        $this->verbose = $this->getArg('verbose');
 		$modules = array_keys( (array)Mage::getConfig()->getNode( 'modules' )->children() );
 		if( !in_array( $module, $modules ) )
 			die( 'Error: Module doesn\'t exist' . PHP_EOL );
@@ -131,8 +133,13 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 			return $dir->walk( array( $this, 'dir' ) );
 
 		$function = 'process' . strtoupper( $dir->getExtension() );
- 		if( is_callable( array( $this, $function ) ) )
-			$this->$function( $dir );
+ 		if( is_callable( array( $this, $function ) ) ){
+            if (($filePath = $dir->getFilePath()) && ($pathName = $filePath->getPathName())){
+                $this->verboseMessage("processing " . $this->removeBasePath($pathName));
+            }
+            $this->$function( $dir );
+        }
+
 
 		unset( $dir );
 		return $this;
@@ -220,7 +227,7 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 
 		$this->_translateFunction( $file );
 
-		$source = file_get_contents( $file );
+        $source = file_get_contents( $file );
 		$tokens = token_get_all( $source );
 
 		reset( $tokens );
@@ -483,6 +490,24 @@ USAGE;
 
 	}
 
+    public function verboseMessage($message)
+    {
+        if (!$this->verbose){
+            return ;
+        }
+        $bt = debug_backtrace();
+        $file = $bt[0]['file'];
+        $file = $this->removeBasePath($file);
+        $line = $bt[0]['line'];
+
+        echo "$message  $file:$line \n";
+    }
+    public function removeBasePath($file)
+    {
+        $file = str_replace(BP,'',$file);
+        $file = ltrim($file,'/');
+        return $file;
+    }
 }
 
 $shell = new AnattaDesign_Shell_Translate();
