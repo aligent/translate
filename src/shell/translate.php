@@ -214,14 +214,15 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 		$func = 'if(($a[0]!==$a[1]&&$b[0]!==$b[1])||($a[0]===$a[1]&&$b[0]===$b[1]))return strcmp($a[0], $b[0]);elseif($b[0]===$b[1])return 1;else return -1;';
 		usort( $translations, create_function( '$a, $b', $func ) );
 
-		ob_start();
+		$content = '';
 
-		foreach( $translations as $string ){
-            $spanishString = $this->translateString($string);
-            echo "\"$string[0]\",\"$spanishString\"\n";
+		foreach( $translations as $aString ){
+
+            $aString[0] =str_replace("\\'","'",$aString[0]);
+            $spanishString = $this->translateString($aString);
+            $content.= "\"$aString[0]\",\"$spanishString\"\n";
         }
-
-        $content = str_replace( '\"', '""', ob_get_clean() );
+        $content = str_replace( '\"', '""', $content );
         //do not write empty file unless already exists
         if (file_exists($file) || $content){
             file_put_contents( $file,  $content);
