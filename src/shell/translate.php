@@ -35,9 +35,10 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 	 * Run script
 	 */
 	public function run() {
+        $this->verbose = $this->getArg('verbose');
+
 		// if module doesn't exist show error
 		$module = $this->getArg( 'module' ) ? $this->getArg( 'module' ) : $this->getArg( 'm' );
-        $this->verbose = $this->getArg('verbose');
 		$modules = array_keys( (array)Mage::getConfig()->getNode( 'modules' )->children() );
 		if( !in_array( $module, $modules ) )
 			die( 'Error: Module doesn\'t exist' . PHP_EOL );
@@ -49,38 +50,43 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 		$dir->walk( array( $this, 'dir' ) );
 		unset( $dir );
 
-		// traverse through all module files in design/frontend/base/default/template directory for translatable strings
-		$dir = Mage::getBaseDir( 'design' ) . DS . 'frontend' . DS . 'base' . DS . 'default' . DS . 'template' . DS;
-		foreach( explode( '_', strtolower( $module ) ) as $path )
-			$dir = $dir . $path . DS;
-		if( file_exists( $dir ) ) {
-			/* @var $dir Varien_Directory_Collection */
-			$dir = Varien_Directory_Factory::getFactory( $dir );
-			$dir->walk( array( $this, 'dir' ) );
-			unset( $dir );
-		}
+        $baseDesign = Mage::getBaseDir('design');
+        $aPackages = array(
+            'frontend/base/default',
+            'adminhtml/base/default',
+        );
+        $oEventParam = new Varien_Object();
+        $oEventParam->setPackageList($aPackages);
+        $oEventParam->setModuleName($module);
 
-		// traverse through all module files in design/adminhtml/default/default/template directory for translatable strings
-		$dir = Mage::getBaseDir( 'design' ) . DS . 'adminhtml' . DS . 'default' . DS . 'default' . DS . 'template' . DS;
-		foreach( explode( '_', strtolower( $module ) ) as $path )
-			$dir = $dir . $path . DS;
-		if( file_exists( $dir ) ) {
-			/* @var $dir Varien_Directory_Collection */
-			$dir = Varien_Directory_Factory::getFactory( $dir );
-			$dir->walk( array( $this, 'dir' ) );
-			unset( $dir );
-		}
+        $oEventParam->setModuleTemplateDirectory();
 
-		// traverse through all module files in design/install/default/default/template directory for translatable strings
-		$dir = Mage::getBaseDir( 'design' ) . DS . 'install' . DS . 'default' . DS . 'default' . DS . 'template' . DS;
-		foreach( explode( '_', strtolower( $module ) ) as $path )
-			$dir = $dir . $path . DS;
-		if( file_exists( $dir ) ) {
-			/* @var $dir Varien_Directory_Collection */
-			$dir = Varien_Directory_Factory::getFactory( $dir );
-			$dir->walk( array( $this, 'dir' ) );
-			unset( $dir );
-		}
+        Mage::dispatchEvent('translate_before_template_loop', array('param' => $oEventParam));
+        $aPackages = $oEventParam->getPackageList();
+        $aTemplateDirectory = array();
+        foreach ($aPackages as $sPackage) {
+            $aTemplateDirectory[] = "$baseDesign/$sPackage/template/";
+        }
+        $aModuleDirectory = $oEventParam->getModuleTemplateDirectory();
+        foreach ($aTemplateDirectory as $dir) {
+            foreach( explode( '_', strtolower( $module ) ) as $path ){
+                $dir = $dir . $path . DS;
+            }
+            $aModuleDirectory[] = $dir;
+        }
+
+        foreach ($aModuleDirectory as $path) {
+            if (file_exists($path)) {
+                /* @var $dir Varien_Directory_Collection */
+                $dir = Varien_Directory_Factory::getFactory($path);
+                $dir->walk(array($this, 'dir'));
+            }
+            else{
+                xdebug_break();
+            }
+        }
+        unset($dir);
+
 
 		// go through the config.xml to find translatable strings in defined layouts
 		$dir = Mage::getModuleDir( 'etc', $module );
@@ -209,14 +215,29 @@ class AnattaDesign_Shell_Translate extends Mage_Shell_Abstract {
 		usort( $translations, create_function( '$a, $b', $func ) );
 
 		ob_start();
-		foreach( $translations as $string )
-			echo "\"$string[0]\",\"$string[1]\"\n";
+
+		foreach( $translations as $string ){
+            $spanishString = $this->translateString($string);
+            echo "\"$string[0]\",\"$spanishString\"\n";
+        }
+
         $content = str_replace( '\"', '""', ob_get_clean() );
         //do not write empty file unless already exists
         if (file_exists($file) || $content){
             file_put_contents( $file,  $content);
         }
 	}
+
+    protected function translateString($aString)
+    {
+        $englishString = $aString[0];
+        $param = new Varien_Object();
+        $param->setEnglishString($englishString);
+        Mage::dispatchEvent('shell_translate_string',array('param'=>$param));
+        $spanishString = $param->getSpanishString();
+        $spanishString = $spanishString ? $spanishString : $aString[1];
+        return $spanishString;
+    }
 
 	/**
 	 * @param $file Varien_File_Object
